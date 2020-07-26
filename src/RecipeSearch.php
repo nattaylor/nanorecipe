@@ -7,13 +7,18 @@ use Symfony\Component\CssSelector\CssSelectorConverter;
 /** Search recipe(s) from a recipe source */
 class RecipeSearch {
 
-	private $sources = [
+	protected $sources = [
 		"epicurious" => [
 			"search" => "/search/%s-?content=recipe",
 			"base" => "https://www.epicurious.com"
+		],
+		"nytcooking" => [
+			"base" => "https://cooking.nytimes.com/",
+			"search" => "/search?q=%s",
+			"class" => "\Recipes\RecipeSearchNYTCooking"
 		]
 	];
-	private $recipe = [];
+	protected $recipe = [];
 	private $client;
 	private $start = 0;
 
@@ -36,7 +41,15 @@ class RecipeSearch {
 	 * @return Array           A associative array contain the recipe details
 	 */
 	public function getResult($keyword, $source = 'epicurious') {
-		$this->recipe['search'] = $this->sources[$source]['base'].sprintf($this->sources[$source]['search'], str_replace(' ', '-', $keyword, ));
+		if (!array_key_exists($source, $this->sources)) {
+			throw new \Exception("$source does not exist");
+		}
+		$this->{"getResult$source"}($keyword);
+		return $this->recipe;
+	}
+
+	private function getResultnytcooking($keyword) {
+		$this->recipe['search'] = $this->sources['nytcooking']['base'].sprintf($this->sources['nytcooking']['search'], str_replace(' ', '-', $keyword, ));
 		$client = $this->client;
 		$response = $client->request('GET', $this->recipe['search']);
 		$dom = new \DOMDocument();
@@ -44,7 +57,40 @@ class RecipeSearch {
 		$converter = new CssSelectorConverter();
 		$xpath = new \DOMXPath($dom);
 		try {
-			$this->recipe['url'] = $this->sources[$source]['base'].$xpath->query($converter->toXPath(".results-group .recipe-panel > a"))[0]->getAttribute('href');
+			$this->recipe['url'] = $this->sources['nytcooking']['base'].$xpath->query($converter->toXPath(".recipe-card-list .recipe-card a"))[0]->getAttribute('href');
+		} catch (Exception $e) {
+			//
+		}
+		$response = $client->request('GET', $this->recipe['url']);
+		$dom = new \DOMDocument();
+		@$dom->loadHTML(mb_convert_encoding($response->getBody(), 'HTML-ENTITIES', 'UTF-8'));
+		$converter = new CssSelectorConverter();
+		$xpath = new \DOMXPath($dom);
+		try {
+			$recipe = $xpath->query($converter->toXPath(".recipe-instructions"))[0];
+			$title = $xpath->query($converter->toXPath(".recipe-title"))[0]->textContent;
+			$img = $xpath->query($converter->toXPath("head > meta[property='og:image']"))[0]->getAttribute('content');
+		} catch (Exception $e) {
+			//
+		}
+		$this->recipe['title'] = trim($title);
+		$this->recipe['contents'] = implode(array_map([$recipe->ownerDocument,"saveHTML"], iterator_to_array($recipe->childNodes)));
+		$this->recipe['img'] = $img;
+		if (empty($this->recipe['title']) OR empty($this->recipe['contents'])) {
+			throw new \Exception('Unable ');
+		}
+	}
+
+	private function getResultepicurious($keyword) {
+		$this->recipe['search'] = $this->sources['epicurious']['base'].sprintf($this->sources['epicurious']['search'], str_replace(' ', '-', $keyword, ));
+		$client = $this->client;
+		$response = $client->request('GET', $this->recipe['search']);
+		$dom = new \DOMDocument();
+		@$dom->loadHTML(mb_convert_encoding($response->getBody(), 'HTML-ENTITIES', 'UTF-8'));
+		$converter = new CssSelectorConverter();
+		$xpath = new \DOMXPath($dom);
+		try {
+			$this->recipe['url'] = $this->sources['epicurious']['base'].$xpath->query($converter->toXPath(".results-group .recipe-panel > a"))[0]->getAttribute('href');
 		} catch (Exception $e) {
 			//
 		}
@@ -56,15 +102,16 @@ class RecipeSearch {
 		try {
 			$recipe = $xpath->query($converter->toXPath("div.recipe-content"))[0];
 			$title = $xpath->query($converter->toXPath(".recipe-title-wrapper h1"))[0]->textContent;
+			$img = $xpath->query($converter->toXPath(".recipe-image picture > img"))[0]->getAttribute('srcset');
 		} catch (Exception $e) {
 			//
 		}
 		$this->recipe['title'] = trim($title);
 		$this->recipe['contents'] = implode(array_map([$recipe->ownerDocument,"saveHTML"], iterator_to_array($recipe->childNodes)));
+		$this->recipe['img'] = $img;
 		if (empty($this->recipe['title']) OR empty($this->recipe['contents'])) {
 			throw new \Exception('Unable ');
 		}
-		return $this->recipe;
 	}
 
 	/**
@@ -73,7 +120,6 @@ class RecipeSearch {
 	 */
 	public function renderResult() {
 		$time = time() - $this->start;
-		error_log($time);
 		return <<<HTML
 <!DOCTYPE html>
 <html>
@@ -107,8 +153,12 @@ class RecipeSearch {
 		top:1vw;
 		right:1vw;
 	}
-	img {
+	.recipe-content > div {
 		display:none;
+	}
+
+	.recipe-content .recipe-summary, .recipe-content .ingredients-info, .recipe-content .instructions, .recipe-content .recipe-notes {
+		display:block;
 	}
 
 	</style>
@@ -117,6 +167,7 @@ class RecipeSearch {
 	<h1><a href="{$this->recipe['url']}">{$this->recipe['title']}</a></h1>
 	<div class="links"><span id="time">{$time}</span> | <a href="./">New</a> | <a href="{$this->recipe['search']}">More</a></div>
 	<div class="recipe-content">{$this->recipe['contents']}</div>
+	<img src="{$this->recipe['img']}" />
 	<script type="text/javascript">
 		document.querySelector("#time").innerText = (parseFloat(document.querySelector("#time").innerText)+parseFloat(performance.getEntriesByType("navigation").pop().loadEventStart/1000)).toFixed(1)+"s";
 	</script>
@@ -146,13 +197,21 @@ HTML;
 <body>
 	<h1>NanoRecipe</h1>
 	<form method="get" action="./">
+		<p>Search for a recipe and get a plaintext result back in a couple of seconds.</p>
 		<input type="text" name="keyword" style="font-size:large" />
+		<br>
+		<select name="source">
+			<option selected>epicurious</option>
+			<option>nytcooking</option>
+		</select>
 	</form>
 	<script>
+	/** Help mobile users with focus */
 	document.body.addEventListener("click", function(e) {
 		e.preventDefault()
 		document.querySelector("input[name='keyword']").focus()
 	})
+	/** Bind submit to enter key */
 	document.querySelector("form").addEventListener("keydown",function(event) {
 		if (event.keyCode === 13) {
 			this.submit();

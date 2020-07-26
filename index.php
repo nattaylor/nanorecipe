@@ -9,6 +9,6 @@ $recipe = new Recipes\RecipeSearch();
 if (empty($_GET['keyword'])) {
 	echo $recipe->renderIndex();
 } else {
-	$result = $recipe->getResult($_GET['keyword']);
+	$result = $recipe->getResult($_GET['keyword'], $_GET['source']);
 	echo $recipe->renderResult($result);
 }
