@@ -9,4 +9,4 @@ I cannot spend another minute scrolling through blabber on a recipe site.
 
 ## Testing
 
-`./vendor/bin/phpunit tests`
+`composer test` or `./vendor/bin/phpunit tests`

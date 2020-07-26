@@ -2,7 +2,6 @@
 
 namespace Recipes;
 
-use Curl\Curl;
 use Symfony\Component\CssSelector\CssSelectorConverter;
 
 /** Search recipe(s) from a recipe source */
@@ -15,6 +14,18 @@ class RecipeSearch {
 		]
 	];
 	private $recipe = [];
+	private $client;
+
+	public function __construct($client = null) {
+		if (is_null($client)) {
+			$client = new \GuzzleHttp\Client([
+				'headers' => [
+					'User-Agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.89 Safari/537.36'
+				]
+			]);
+		}
+		$this->client = $client;
+	}
 
 	/**
 	 * Search a recipe source for a keyword and return the first result
@@ -24,14 +35,10 @@ class RecipeSearch {
 	 */
 	public function getResult($keyword, $source = 'epicurious') {
 		$this->recipe['search'] = $this->sources[$source]['base'].sprintf($this->sources[$source]['search'], str_replace(' ', '-', $keyword, ));
-		$curl = new Curl();
-		$curl->setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.89 Safari/537.36');
-		$curl->get($this->recipe['search']);
-		if ($curl->error) {
-			throw new \Exception($curl->error_code);
-		}
+		$client = $this->client;
+		$response = $client->request('GET', $this->recipe['search']);
 		$dom = new \DOMDocument();
-		@$dom->loadHTML(mb_convert_encoding($curl->response, 'HTML-ENTITIES', 'UTF-8'));
+		@$dom->loadHTML(mb_convert_encoding($response->getBody(), 'HTML-ENTITIES', 'UTF-8'));
 		$converter = new CssSelectorConverter();
 		$xpath = new \DOMXPath($dom);
 		try {
@@ -39,12 +46,9 @@ class RecipeSearch {
 		} catch (Exception $e) {
 			//
 		}
-		$curl->get($this->recipe['url']);
-		if ($curl->error) {
-			throw new \Exception($curl->error_code);
-		}
+		$response = $client->request('GET', $this->recipe['url']);
 		$dom = new \DOMDocument();
-		@$dom->loadHTML(mb_convert_encoding($curl->response, 'HTML-ENTITIES', 'UTF-8'));
+		@$dom->loadHTML(mb_convert_encoding($response->getBody(), 'HTML-ENTITIES', 'UTF-8'));
 		$converter = new CssSelectorConverter();
 		$xpath = new \DOMXPath($dom);
 		try {
@@ -53,7 +57,6 @@ class RecipeSearch {
 		} catch (Exception $e) {
 			//
 		}
-		$curl->close();
 		$this->recipe['title'] = trim($title);
 		$this->recipe['contents'] = implode(array_map([$recipe->ownerDocument,"saveHTML"], iterator_to_array($recipe->childNodes)));
 		if (empty($this->recipe['title']) OR empty($this->recipe['contents'])) {
@@ -133,8 +136,7 @@ HTML;
 <body>
 	<h1>NanoRecipe</h1>
 	<form method="post" action="./">
-		<input type="text" name="keyword" />
-		<input type="submit" value="Search" />
+		<input type="text" name="keyword" style="font-size:large" />
 	</form>
 	<script>
 	document.body.addEventListener("click", function(e) {
