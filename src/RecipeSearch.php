@@ -75,13 +75,13 @@ class RecipeSearch {
 	<title>{$this->recipe['title']}</title>
 	<style>
 	.preparation-groups, .ingredient-groups {
-	    list-style-type:none;
-	    margin:0;
-	    padding:0;
+			list-style-type:none;
+			margin:0;
+			padding:0;
 	}
 
 	.recipe-video-wrap {
-	    display:none;
+			display:none;
 	}
 
 	dt {
@@ -141,10 +141,10 @@ HTML;
 		e.preventDefault()
 		document.querySelector("input[name='keyword']").focus()
 	})
-	document.querySelector("form").addEventListener("keydown",function() {
+	document.querySelector("form").addEventListener("keydown",function(event) {
 		if (event.keyCode === 13) {
-      this.submit();
-    }
+			this.submit();
+		}
 	})
 	</script>
 </body>
