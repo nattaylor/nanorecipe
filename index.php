@@ -6,9 +6,9 @@
 require __DIR__ . '/vendor/autoload.php';
 
 $recipe = new Recipes\RecipeSearch();
-if (empty($_POST['keyword'])) {
+if (empty($_GET['keyword'])) {
 	echo $recipe->renderIndex();
 } else {
-	$result = $recipe->getResult($_POST['keyword']);
+	$result = $recipe->getResult($_GET['keyword']);
 	echo $recipe->renderResult($result);
 }

@@ -135,7 +135,7 @@ HTML;
 </head>
 <body>
 	<h1>NanoRecipe</h1>
-	<form method="post" action="./">
+	<form method="get" action="./">
 		<input type="text" name="keyword" style="font-size:large" />
 	</form>
 	<script>
