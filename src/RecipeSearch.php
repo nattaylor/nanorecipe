@@ -135,6 +135,11 @@ HTML;
 		<input type="text" name="keyword" autofocus />
 		<input type="submit" value="Search" />
 	</form>
+	<script>
+	document.body.addEventListener("click", function() {
+		document.querySelector("input[name='keyword']").focus()
+	})
+	</script>
 </body>
 </html>
 HTML;
