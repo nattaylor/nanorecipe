@@ -141,6 +141,11 @@ HTML;
 		e.preventDefault()
 		document.querySelector("input[name='keyword']").focus()
 	})
+	document.querySelector("form").addEventListener("keydown",function() {
+		if (event.keyCode === 13) {
+      this.submit();
+    }
+	})
 	</script>
 </body>
 </html>
