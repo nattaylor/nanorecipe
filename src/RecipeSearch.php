@@ -132,11 +132,12 @@ HTML;
 <body>
 	<h1>NanoRecipe</h1>
 	<form method="post" action="./">
-		<input type="text" name="keyword" autofocus />
+		<input type="text" name="keyword" />
 		<input type="submit" value="Search" />
 	</form>
 	<script>
-	document.body.addEventListener("click", function() {
+	document.body.addEventListener("click", function(e) {
+		e.preventDefault()
 		document.querySelector("input[name='keyword']").focus()
 	})
 	</script>
