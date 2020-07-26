@@ -15,8 +15,10 @@ class RecipeSearch {
 	];
 	private $recipe = [];
 	private $client;
+	private $start = 0;
 
 	public function __construct($client = null) {
+		$this->start = time();
 		if (is_null($client)) {
 			$client = new \GuzzleHttp\Client([
 				'headers' => [
@@ -70,6 +72,8 @@ class RecipeSearch {
 	 * @return string the rendered HTML
 	 */
 	public function renderResult() {
+		$time = time() - $this->start;
+		error_log($time);
 		return <<<HTML
 <!DOCTYPE html>
 <html>
@@ -103,13 +107,19 @@ class RecipeSearch {
 		top:1vw;
 		right:1vw;
 	}
+	img {
+		display:none;
+	}
 
 	</style>
 </head>
 <body>
 	<h1><a href="{$this->recipe['url']}">{$this->recipe['title']}</a></h1>
-	<div class="links"><a href="./">New</a> | <a href="{$this->recipe['search']}">More</a></div>
+	<div class="links"><span id="time">{$time}</span> | <a href="./">New</a> | <a href="{$this->recipe['search']}">More</a></div>
 	<div class="recipe-content">{$this->recipe['contents']}</div>
+	<script type="text/javascript">
+		document.querySelector("#time").innerText = (parseFloat(document.querySelector("#time").innerText)+parseFloat(performance.getEntriesByType("navigation").pop().loadEventStart/1000)).toFixed(1)+"s";
+	</script>
 </body>
 </html>
 HTML;
