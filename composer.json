@@ -21,6 +21,7 @@
         "phpunit/phpunit": "^9"
     },
     "scripts": {
-        "test": "./vendor/bin/phpunit tests"
+        "test": "./vendor/bin/phpunit tests",
+        "serve": "php -S localhost:8000"
     }
 }
