@@ -126,6 +126,7 @@ HTML;
 	<style>
 		body {
 			text-align: center;
+			min-height: 100vh;
 		}
 	</style>
 </head>
