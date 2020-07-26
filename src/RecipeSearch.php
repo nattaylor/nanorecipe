@@ -131,7 +131,7 @@ HTML;
 </head>
 <body>
 	<h1>NanoRecipe</h1>
-	<form method="post" action="index.php">
+	<form method="post" action="./">
 		<input type="text" name="keyword" autofocus />
 		<input type="submit" value="Search" />
 	</form>
